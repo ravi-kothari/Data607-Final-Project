@@ -1,3 +1,51 @@
+<!-- # --- -->
+<!-- # title: "Find me best beer" -->
+<!-- # author: Ravi Kothari   -->
+<!-- # output: ioslides_presentation -->
+<!-- #  -->
+<!-- # .codefont pre { -->
+<!-- #  -->
+<!-- #     font-size: 12px; -->
+<!-- #     line-height: 10px; -->
+<!-- # } -->
+  
+---
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+
+The final project for DATA 607 aims to find the best breweries in a particular area based on their ratings and their beer ratings. This project scrapes the data from beeradvocate website and then plots them on the map.
+
+
+## Motivation
+
+
+The Motivation behind this project was to find the best beer in my area and also to visualize the breweries and see which areas has more high rated brewries when plotted on the map.
+
+## Overview of data gathered
+
+
+The app first takes the beeradvocate URL as an input and then scrape it to get the following characteristic of the brewery and beer.
+
+- Brewery Name.
+- Brewery ratings.
+- No. of reviews.
+- Average beer rating for that particular brewery.
+- No. of beers in that brewery.
+- Address of the brewery.
+
+
+## Code to scrape the Data.{.smaller}
+
+
+
+To scrape the data we used rvest package, the code below loops through all the result pages and gather the brewery data. After that we converted it to a dataframe for cleaning and transforming.
+
+```{r, echo=TRUE, message=FALSE}
+
 library(RCurl)
 library(XML)
 library(rvest)
@@ -5,8 +53,7 @@ library(knitr)
 library(dplyr)
 library(stringr)
 library(devtools)
-install_github('ramnathv/slidify')
-install_github('ramnathv/slidifyLibraries')
+
 
 #parse the URL
 
@@ -69,8 +116,27 @@ for (i in c(1:page_no)){
 brewery_mat <- matrix(unlist(final), ncol = 5, byrow = TRUE)
 brewery_final <- cbind(brewery_mat,final_add)
 beer_df <- as.data.frame(brewery_final)
+
+
+```
+
+
+## The results after scraping
+
+
+
+```{r, echo=FALSE}
+
 head(beer_df)
 
+```
+
+## Cleansing the data {.smaller}
+
+
+After scraping we need to clean and reformat the data.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
 # change the column names
 colnames(beer_df) <- c("brewery_name", "brewery_rating", "number_of_reviews", "beer_avg", "number_of_beers", "address")
 
@@ -93,13 +159,10 @@ beer_df$address <- gsub('(\\.)([[:upper:]])', '\\1 \\2',beer_df$address)
 beer_df$address <- gsub('([[:upper:]])([[:upper:]])', '\\1 \\2',beer_df$address)
 
 # change the factor for average beer rating into a numeric
-# http://stackoverflow.com/questions/3418128/how-to-convert-a-factor-to-an-integer-numeric-without-a-loss-of-information
 
 beer_df$beer_avg <- as.numeric(levels(beer_df$beer_avg))[beer_df$beer_avg]
 beer_df$brewery_rating <- as.numeric(levels(beer_df$brewery_rating))[beer_df$brewery_rating]
 beer_df$number_of_reviews <- as.numeric(beer_df$number_of_reviews)
-View(beer_df)
-
 
 top_beer <-     beer_df %>%
   filter(!is.na(number_of_reviews)) %>%
@@ -113,8 +176,12 @@ top_brewery <-     beer_df %>%
   filter(number_of_reviews >= 50 & brewery_rating >= 4) %>%
   arrange(desc(brewery_rating),desc(number_of_reviews))
 
-View(top_beer)
-View(top_brewery)
+```
+
+## Create location cordinates{.smaller}
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
 
 library(htmlwidgets)
 library(leaflet)
@@ -135,6 +202,14 @@ top_brewery$lon <- geo2$lon
 top_brewery$lat <- geo2$lat
 
 
+
+```
+
+
+## Results
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # create the pop-up info
 top_beer$pop_up_content <- paste(sep = "<br/>", 
                                     "<b><a href='", top_beer$brewery_name, "'>", top_beer$brewery_name, "</a></b>", top_beer$address,
@@ -149,6 +224,13 @@ leaflet(data = top_beer) %>%
   setView(lng =-119.417931, lat=36.778259, zoom = 6) %>%
   addMarkers(lng = top_beer$lon[!is.na(top_beer$lon)], 
              lat = top_beer$lat[!is.na(top_beer$lat)], popup = ~as.character(pop_up_content))
+```
+
+## Results
+
+Mapping of breweries based on their beer ratings.
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
 
 leaflet(top_beer) %>% 
   addTiles('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', 
@@ -163,6 +245,14 @@ leaflet(top_beer) %>%
                 title = "Average Beer Ratings at Brewery",
                 opacity = 1)
 
+```
+
+## Results
+
+Mapping of the breweries based on the brewery ratings.
+
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
 
 top_brewery$pop_up_content <- paste(sep = "<br/>", 
                                  "<b><a href='", top_beer$brewery_name, "'>", top_beer$brewery_name, "</a></b>", top_beer$address,
@@ -178,8 +268,22 @@ leaflet(data = top_brewery) %>%
   addLegend("topright", pal = pal, values = top_brewery$brewery_rating,
             title = "Brewery Ratings",
             opacity = 1)
+```
 
+## Challenges and lessons learned
 
+Some of the challenges faced were:
+
+- Address formatting,
+- Due to which it was calculating wrong coordinates.
+- Also something new I learned in this project is about leaflet package and ioslides.
+
+## References
+
+- http://stackoverflow.com/questions/3418128/how-to-convert-a-factor-to-an-integer-numeric-without-a-loss-of-information
+- https://github.com/parryc/beer-advocate-api
+- https://www.r-bloggers.com/the-leaflet-package-for-online-mapping-in-r/
+- http://rmarkdown.rstudio.com/ioslides_presentation_format.html
 
 
 
